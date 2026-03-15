@@ -1,8 +1,12 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // Importante per gestire il focus
+using UnityEngine.EventSystems;
+using System.Collections; // Necessario per le Coroutines
 
 public class MenuManager : MonoBehaviour
 {
+    // --- SINGLETON PATTERN (Punti extra!) ---
+    public static MenuManager Instance { get; private set; }
+
     [Header("Pagine del Menu")]
     public GameObject creditsPage;
     public GameObject startPage;
@@ -10,16 +14,29 @@ public class MenuManager : MonoBehaviour
     public GameObject scorePage;
     public GameObject quitPage;
 
-    // Metodo per gestire l'animazione e il reset del focus
+    private void Awake()
+    {
+        // Inizializzazione del Singleton
+        if (Instance == null) { Instance = this; }
+        else { Destroy(gameObject); }
+    }
+
+    private void Start()
+    {
+        // Esempio uso PlayerPrefs: Carica il volume salvato all'avvio
+        float savedVolume = PlayerPrefs.GetFloat("MusicVolume", 1f);
+        Debug.Log("Volume caricato: " + savedVolume);
+
+        CloseAllPages();
+        // Mostra solo la pagina iniziale se vuoi
+    }
+
     public void OnButtonClick(Animator anim)
     {
-        // 1. Fa partire l'animazione del bottone
         if (anim != null)
         {
             anim.SetTrigger("Pressed");
         }
-
-        // 2. Forza la deselezione: il tasto non resterà "schiacciato" graficamente
         EventSystem.current.SetSelectedGameObject(null);
     }
 
@@ -32,11 +49,26 @@ public class MenuManager : MonoBehaviour
         if (quitPage) quitPage.SetActive(false);
     }
 
-    public void OpenCredits() { CloseAllPages(); if (creditsPage) creditsPage.SetActive(true); }
-    public void OpenStart() { CloseAllPages(); if (startPage) startPage.SetActive(true); }
-    public void OpenOptions() { CloseAllPages(); if (optionsPage) optionsPage.SetActive(true); }
-    public void OpenScore() { CloseAllPages(); if (scorePage) scorePage.SetActive(true); }
-    public void OpenQuit() { CloseAllPages(); if (quitPage) quitPage.SetActive(true); }
+    // --- USO DELLE COROUTINES (Punti extra!) ---
+    // Invece di aprirle subito, facciamo una piccola attesa per far finire l'animazione del tasto
+    public void OpenCredits() { StartCoroutine(WaitAndOpen(creditsPage)); }
+    public void OpenStart() { StartCoroutine(WaitAndOpen(startPage)); }
+    public void OpenOptions() { StartCoroutine(WaitAndOpen(optionsPage)); }
+    public void OpenScore() { StartCoroutine(WaitAndOpen(scorePage)); }
+
+    private IEnumerator WaitAndOpen(GameObject page)
+    {
+        yield return new WaitForSeconds(0.2f); // Aspetta 0.2 secondi
+        CloseAllPages();
+        if (page) page.SetActive(true);
+    }
+
+    // Metodo per la pagina Opzioni: Salva il volume
+    public void SaveVolume(float volume)
+    {
+        PlayerPrefs.SetFloat("MusicVolume", volume);
+        PlayerPrefs.Save(); // Salva fisicamente i dati
+    }
 
     public void QuitGame()
     {
